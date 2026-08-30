@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(src/test/**)",
+      "Edit(target/**)",
+      "Edit(src/main/resources/db/migration/**)",
+      "Read(.env)",
+      "Read(**/*.pem)"
+    ],
+    "ask": [
+      "Bash(./deploy.sh:*)",
+      "Bash(kubectl:*)",
+      "Bash(helm:*)",
+      "Bash(git push:*)"
+    ],
+    "allow": [
+      "Bash(mvn:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
