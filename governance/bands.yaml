@@ -1,0 +1,18 @@
+metric: ci_test_failure_rate
+baseline: last_30_runs
+window: last_5_runs
+
+tiers:
+  - level: 1
+    condition: recent_rate > baseline_rate
+    action: log
+  - level: 2
+    condition: recent_rate >= 0.4
+    action: diagnose
+    tools: [read, grep]
+  - level: 3
+    condition: recent_rate >= 0.6
+    action: propose
+    routes:
+      - open_pull_request
+      - runbook: rollback-deploy

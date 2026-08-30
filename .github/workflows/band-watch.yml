@@ -1,0 +1,51 @@
+name: Band watch
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RECENT=$(gh run list --limit 5 --json conclusion \
+            | jq '[.[] | select(.conclusion=="failure")] | length / 5')
+          echo "recent=$RECENT" >> $GITHUB_OUTPUT
+          echo "breach=$(echo "$RECENT >= 0.4" | bc)" >> $GITHUB_OUTPUT
+
+      - name: Diagnose
+        if: steps.detect.outputs.breach == '1'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude -p "The CI test failure rate has breached its control band \
+          (recent failure rate ${{ steps.detect.outputs.recent }}). \
+          Diagnose the cause from the repository and recent run history. \
+          Write your finding into intent/ using the format in intent/TEMPLATE.md. \
+          Cover the anomaly and its evidence, a proposed outcome, affected systems, \
+          and open questions. Do not change any application code." \
+          --allowedTools "Read,Grep,Write(intent/**)"
+
+      - name: Raise finding
+        if: steps.detect.outputs.breach == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "band-watch"
+          git config user.email "band-watch@users.noreply.github.com"
+          git checkout -b finding/$(date +%s)
+          git add intent/
+          git commit -m "intent: CI failure rate band breach"
+          git push -u origin HEAD
+          gh pr create --fill --label finding
